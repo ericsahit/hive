@@ -1495,9 +1495,9 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
 
     Table tab = getTable(tableName, true);
     // cascade only occurs with partitioned table
-    if (isCascade && tab.isPartitioned()) {
+    if (isCascade && !tab.isPartitioned()) {
       throw new SemanticException(
-              ErrorMsg.ALTER_TABLE_NON_PARTITIONED_TABLE_CASCADE_NOT_SUPPORTED);
+          ErrorMsg.ALTER_TABLE_NON_PARTITIONED_TABLE_CASCADE_NOT_SUPPORTED);
     }
 
     // Determine the lock type to acquire
