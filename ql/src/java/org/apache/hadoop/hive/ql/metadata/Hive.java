@@ -57,11 +57,8 @@ import javax.jdo.JDODataStoreException;
 import org.apache.calcite.plan.RelOptMaterialization;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileChecksum;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hive.common.FileUtils;
 import org.apache.hadoop.hive.common.HiveStatsUtils;
 import org.apache.hadoop.hive.common.ObjectPair;
@@ -3276,7 +3273,15 @@ private void constructOneLBLocationMap(FileStatus fSta,
 
               final Path destFile = new Path(destf, srcStatus.getPath().getName());
               if (null == pool) {
-                if(!destFs.rename(srcStatus.getPath(), destFile)) {
+                boolean success = false;
+                if (destFs instanceof DistributedFileSystem) {
+                  ((DistributedFileSystem) destFs).rename(srcStatus.getPath(), destFile, Options.Rename.OVERWRITE);
+                  success = true;
+                } else {
+                  destFs.delete(destFile, false);
+                  success = destFs.rename(srcStatus.getPath(), destFile);
+                }
+                if (!success) {
                   throw new IOException("rename for src path: " + srcStatus.getPath() + " to dest:"
                       + destf + " returned false");
                 }
@@ -3285,8 +3290,15 @@ private void constructOneLBLocationMap(FileStatus fSta,
                   @Override
                   public Void call() throws Exception {
                     SessionState.setCurrentSessionState(parentSession);
-                    final String group = srcStatus.getGroup();
-                    if(!destFs.rename(srcStatus.getPath(), destFile)) {
+                    boolean success = false;
+                    if (destFs instanceof DistributedFileSystem) {
+                      ((DistributedFileSystem) destFs).rename(srcStatus.getPath(), destFile, Options.Rename.OVERWRITE);
+                      success = true;
+                    } else {
+                      destFs.delete(destFile, false);
+                      success = destFs.rename(srcStatus.getPath(), destFile);
+                    }
+                    if (!success) {
                       throw new IOException("rename for src path: " + srcStatus.getPath() + " to dest path:"
                           + destFile + " returned false");
                     }
